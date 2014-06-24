@@ -1,8 +1,24 @@
 // JScript source code
 
+function getAllProblems() {
+    var deferred = $.Deferred();
+    
+    var problems = loadProblems();
 
+    if (problems != null)
+        deferred.resolve(problems);
+    else {
+        getProblemRawData().success(function (problemsRawData) {
+            problems = processProblemsRawData(problemsRawData);
+            saveProblems(problems);
+            deferred.resolve(problems);
+        });
+    }
 
-function getAllProblems(data) {
+    return deferred;
+}
+
+function processProblemsRawData(data) {
     var result = [];
     var problems = data.result.problems;
     var stats = data.result.problemStatistics;
@@ -39,10 +55,18 @@ function getAllProblems(data) {
 
 function getUserSubmissionsData(handle) {
     //'http://codeforces.com/api/user.status?handle=' + handle + '&from=1
-    return myGetJSONData('http://codeforces.com/api/user.status?handle=' + handle + '&from=1');
+
+    var deferred = $.Deferred();
+
+    myGetJSONData('http://codeforces.com/api/user.status?handle=' + handle + '&from=1').success(function (submissionsRawData) {
+        submissionsData = submissionsRawData.result; 
+        deferred.resolve(submissionsData);
+    });
+
+    return deferred;
 }
 
-function getProblemData() {
+function getProblemRawData() {
     return myGetJSONData('http://codeforces.com/api/problemset.problems');
 }
 

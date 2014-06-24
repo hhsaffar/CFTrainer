@@ -1,26 +1,42 @@
 
-function getLessSolvedProblemsForHandle(handle, solvedUpperBound) {
+function getLessSolvedProblemsForHandleWithSolvedStatus(handle, solvedUpperBound) {
 
-    // if data is already in data storage read data from storage otherwise ajax
+    var deferred = $.Deferred();
 
     var problems = loadProblems();
 
-    getProblemData().success(function (problemsRawData) {
-        var problems = getAllProblems(problemsRawData);
-        //saveProblems(problems);
+    getAllProblems().done(function (problems) {
         problems = filterProblemsBySolvedUpperBound(problems, solvedUpperBound);
-        getUserSubmissionsData(handle).success(function (submissionsRawData) {
-            var finalProblems = filterProblemsBySubmissions(problems, submissionsRawData);
-            drawTable(finalProblems);
+        getUserSubmissionsData(handle).done(function (submissionsData) {
+            var finalProblems = updateProblemsSolvedStatus(problems, submissionsData);
+            deferred.resolve(finalProblems);
         });
     });
 
+    return deferred;
 }
 
 
+function countProblemsWithSolvedStatusThatAreSolved(problems) {
+    var t = 0;
+    for (var i = 0; i < problems.length; i++) {
+        if (problems[i].isSolvedByUser)
+            t++;
+    }
+    return t;
+}
 
 
-function filterProblemsBySubmissions(problems, submissionsRawData) {
+function filterProblemsWithSolvedStatus(problems,omitSolvedOnes) {
+    result = [];
+    for (var i = 0; i < problems.length; i++) {
+        if (!(omitSolvedOnes && problems[i].isSolvedByUser == true))
+            result.push(problems[i]);
+    }
+    return result;
+}
+
+function updateProblemsSolvedStatus(problems, submissionsData) {
 
     problems.sort(function (obj1, obj2) {
         if (obj1.contestId == obj2.contestId) return (obj1.index).localeCompare(obj2.index);
@@ -29,19 +45,24 @@ function filterProblemsBySubmissions(problems, submissionsRawData) {
 
     var solved = {};
 
-    for (var i = 0; i < submissionsRawData.result.length; i++)
-        if (submissionsRawData.result[i].verdict == 'OK')
-            solved[submissionsRawData.result[i].problem.contestId + submissionsRawData.result[i].problem.index] = true;
+    for (var i = 0; i < submissionsData.length; i++)
+        if (submissionsData[i].verdict == 'OK')
+            solved[submissionsData[i].problem.contestId + submissionsData[i].problem.index] = true;
 
-    result = [];
-    var k = 0;
+    //result = [];
+    //var k = 0;
     for (var i = 0; i < problems.length; i++) {
-        if (solved[problems[i].contestId + problems[i].index] == null || solved[problems[i].contestId + problems[i].index] != true)
-            result.push(problems[i]);
+        if (solved[problems[i].contestId + problems[i].index] == null || solved[problems[i].contestId + problems[i].index] != true) {
+            problems[i].isSolvedByUser = false;
+        }
+        else {
+            problems[i].isSolvedByUser = true;
+        }
+
     }
 
 
-    return result.sort(function (obj1, obj2) {
+    return problems.sort(function (obj1, obj2) {
         if (obj1.contestId == obj2.contestId) return (obj1.index).localeCompare(obj2.index);
         else return (obj2.solvedCount - obj1.solvedCount);
     });

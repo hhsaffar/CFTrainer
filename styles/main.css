@@ -7,3 +7,7 @@ th {
     font-weight: bold;
     padding: 2px;
 }
+
+.solved {
+    background-color:#D4EDC9 !important;
+}
