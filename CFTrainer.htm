@@ -1,0 +1,197 @@
+﻿<!DOCTYPE html>
+
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  
+  <title>CFTrainer</title>
+  
+  <script type="text/javascript" src="./CFTrainer_files/jquery-1.8.3.js"></script>
+  
+  
+  
+  
+  <link rel="stylesheet" type="text/css" href="./CFTrainer_files/result-light.css">
+  
+  <style type="text/css">
+    table {
+    border: 1px solid #666;
+    width: 100%;
+}
+th {
+    background: #e8e8e8;
+    font-weight: bold;
+    padding: 2px;
+}
+  </style>
+  
+
+
+<script type="text/javascript">//<![CDATA[
+    $(window).load(function () {
+        function btnFillTable_onclick() {
+            var handle = $("#txtHandle").val();
+            var solvedUpperBound = parseInt($("#txtSolved_By_LEq").val(), 10);
+
+            //var problems = getLessSolvedProblemsForHandle(handle, solvedUpperBound);
+
+            var context = {
+                handle: handle,
+                solvedUpperBound: solvedUpperBound
+            };
+            getLessSolvedProblemsForHandle(handle, solvedUpperBound);
+        }
+
+        function getLessSolvedProblemsForHandle(handle, solvedUpperBound) {
+
+            getProblemData().success(function (problemsRawData) {
+                var problems = getAllProblems(problemsRawData);
+                problems = filterProblemsBySolvedUpperBound(problems, solvedUpperBound);
+                getUserSubmissionsData(handle).success(function (submissionsRawData) {
+                    var finalProblems = filterProblemsBySubmissions(problems, submissionsRawData);
+                    drawTable(finalProblems);
+                });
+            });
+
+        }
+
+
+        function getProblemData() {
+            return myGetJSONData('http://codeforces.com/api/problemset.problems');
+        }
+
+        function getAllProblems(data) {
+            var result = [];
+            var problems = data.result.problems;
+            var stats = data.result.problemStatistics;
+
+            problems.sort(function (obj1, obj2) {
+                if (obj1.contestId == obj2.contestId) return (obj1.index).localeCompare(obj2.index);
+                else return (obj1.contestId - obj2.contestId)
+            });
+            stats.sort(function (obj1, obj2) {
+                if (obj1.contestId == obj2.contestId) return (obj1.index).localeCompare(obj2.index);
+                else return (obj1.contestId - obj2.contestId)
+            });
+
+
+
+            for (var i = 0; i < problems.length; i++) {
+                if (problems[i].contestId == stats[i].contestId && problems[i].index == stats[i].index) {
+                    result.push({
+                        contestId: problems[i].contestId,
+                        index: problems[i].index,
+                        name: problems[i].name,
+                        url: 'http://codeforces.com/problemset/problem/' + problems[i].contestId + '/' + problems[i].index,
+                        solvedCount: stats[i].solvedCount
+                    });
+                } else {
+                    throw "Not same problems at index " + i;
+                }
+            }
+
+            return result;
+        }
+
+        function filterProblemsBySolvedUpperBound(problems, solvedUpperBound) {
+
+            var result = [];
+            problems.sort(function (obj1, obj2) {
+                return obj1.solvedCount - obj2.solvedCount;
+            });
+
+            for (var i = 0; i < problems.length; i++) {
+                if (problems[i].solvedCount < solvedUpperBound) result.push(problems[i]);
+            }
+            return result;
+        }
+
+        function getUserSubmissionsData(handle) {
+            //'http://codeforces.com/api/user.status?handle=' + handle + '&from=1
+            return myGetJSONData('http://codeforces.com/api/user.status?handle=' + handle + '&from=1');
+        }
+
+
+        function filterProblemsBySubmissions(problems, submissionsRawData) {
+
+            problems.sort(function (obj1, obj2) {
+                if (obj1.contestId == obj2.contestId) return (obj1.index).localeCompare(obj2.index);
+                else return (obj2.solvedCount - obj1.solvedCount);
+            });
+
+            var solved = {};
+
+            for (var i = 0; i < submissionsRawData.result.length; i++)
+                if (submissionsRawData.result[i].verdict == 'OK')
+                    solved[submissionsRawData.result[i].problem.contestId + submissionsRawData.result[i].problem.index] = true;
+
+            result = [];
+            var k = 0;
+            for (var i = 0; i < problems.length; i++) {
+                if (solved[problems[i].contestId + problems[i].index] == null || solved[problems[i].contestId + problems[i].index] != true)
+                    result.push(problems[i]);
+            }
+
+
+            return result.sort(function (obj1, obj2) {
+                if (obj1.contestId == obj2.contestId) return (obj1.index).localeCompare(obj2.index);
+                else return (obj2.solvedCount - obj1.solvedCount);
+            });
+
+        }
+
+        function myGetJSONData(myUrl) {
+            return $.ajax({
+                url: myUrl,
+                type: "GET",
+                dataType: "JSONP",
+                jsonp: 'jsonp',
+                jsonpCallback: 'doSomeThing'
+            });
+        }
+
+
+        function drawTable(data) {
+
+            for (var i = 0; i < data.length; i++) {
+                drawRow(data[i]);
+            }
+        }
+
+        function drawRow(rowData) {
+            var row = $("<tr />")
+            $("#tblProblems").append(row); //this will append tr element to table... keep its reference for a while since we will add cels into it
+            row.append($("<td>" + rowData.contestId + rowData.index + "</td>"));
+            row.append($("<td>" + rowData.name + "</td>"));
+            row.append($("<td>" + rowData.solvedCount + "</td>"));
+        }
+
+        $(document).ready(function () {
+            $("#btnFillTable").click(btnFillTable_onclick);
+        });
+    });//]]>  
+
+</script>
+
+
+</head>
+<body>
+  User Handle:
+<input type="text" id="txtHandle">
+<br>Problems Solved By Less Than:
+<input type="text" id="txtSolved_By_LEq">
+<br>
+<button id="btnFillTable">Find Problems</button>
+<p id="demo"></p>
+<table id="tblProblems">
+    <tbody><tr>
+        <th style="width:4em">#</th>
+        <th>Name</th>
+        <th style="width:4em">Solved</th>
+    </tr>
+</tbody></table>
+  
+
+
+
+
+
+</body></html>
