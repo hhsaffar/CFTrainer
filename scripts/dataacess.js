@@ -41,7 +41,8 @@ function processProblemsRawData(data) {
                 index: problems[i].index,
                 name: problems[i].name,
                 url: 'http://codeforces.com/problemset/problem/' + problems[i].contestId + '/' + problems[i].index,
-                solvedCount: stats[i].solvedCount
+                solvedCount: stats[i].solvedCount,
+                tags:problems[i].tags
             });
         } else {
             throw "Not same problems at index " + i;
