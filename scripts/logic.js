@@ -1,12 +1,83 @@
 
-function getLessSolvedProblemsForHandleWithSolvedStatus(handle, solvedUpperBound) {
+function deferredCalculateTagsDifficulty() {
 
     var deferred = $.Deferred();
 
-    var problems = loadProblems();
+    getAllProblems().done(function (problems){
+        var ans = calculateTagsDifficulty(problems);
+        deferred.resolve(ans);
+
+    });
+
+    return deferred;
+}
+
+
+function calculateTagsDifficulty(problems) {
+
+    tagCnt = {};
+    tagDifficulty = {};
+
+    for (var i = 0; i < problems.length; i++) {
+        for (var j = 0; j < problems[i].tags.length; j++) {
+            if (tagCnt.hasOwnProperty(problems[i].tags[j])) {
+                tagCnt[problems[i].tags[j]]++;
+                tagDifficulty[problems[i].tags[j]] += calculateDifficulty(problems[i].solvedCount);
+            }
+            else {
+                tagCnt[problems[i].tags[j]] = 1;
+                tagDifficulty[problems[i].tags[j]] = calculateDifficulty(problems[i].solvedCount);
+            }
+        }
+    }
+
+    ans = {};
+
+    for (var tagName in tagCnt) {
+        if (tagCnt.hasOwnProperty(tagName)) {
+            if (tagCnt[tagName] >= 50)
+                ans[tagName] = tagDifficulty[tagName] / tagCnt[tagName];
+        }
+    }
+
+    return ans;
+}
+
+function calculateAverageDifficulty(problems) {
+
+    var sum = 0;
+    for (var i = 0; i < problems.length; i++) {
+        sum += calculateDifficulty(problems[i].solvedCount);
+    }
+    return sum / problems.length;
+}
+
+function calculateAverageDifficultyOfSolved(problems) {
+
+    var sum = 0;
+    var cnt = 0;
+    for (var i = 0; i < problems.length; i++) {
+        if (problems[i].isSolvedByUser) {
+            sum += calculateDifficulty(problems[i].solvedCount);
+            cnt++;
+        }
+    }
+    return sum / cnt;
+}
+
+
+
+function calculateDifficulty(solvedByCount) {
+    return 10000 / (1 + solvedByCount);
+}
+
+function getLessSolvedProblemsForHandleWithSolvedStatus(handle, solvedUpperBound,tag) {
+
+    var deferred = $.Deferred();
 
     getAllProblems().done(function (problems) {
         problems = filterProblemsBySolvedUpperBound(problems, solvedUpperBound);
+        problems = filterProblemsByTag(problems, tag);
         getUserSubmissionsData(handle).done(function (submissionsData) {
             var finalProblems = updateProblemsSolvedStatus(problems, submissionsData);
             deferred.resolve(finalProblems);
@@ -32,6 +103,24 @@ function filterProblemsWithSolvedStatus(problems,omitSolvedOnes) {
     for (var i = 0; i < problems.length; i++) {
         if (!(omitSolvedOnes && problems[i].isSolvedByUser == true))
             result.push(problems[i]);
+    }
+    return result;
+}
+
+
+function filterProblemsByTag(problems, tag) {
+    
+    if (tag == null || tag == "")
+        return problems;
+
+    result = [];
+    for (var i = 0; i < problems.length; i++) {
+        for (var j = 0; j < problems[i].tags.length; j++) {
+            if (problems[i].tags[j] == tag) {
+                result.push(problems[i]);
+                break;
+            }
+        }
     }
     return result;
 }
