@@ -39,6 +39,8 @@ function lnkReloadProblemSet_onclick() {
     var handle = $("#txtHandle").val();
     var solvedUpperBound = parseInt($("#txtSolved_By_LEq").val(), 10);
 
+    saveProblems(null);
+
     getLessSolvedProblemsForHandleWithSolvedStatus(handle, solvedUpperBound, $("#ddlTags").val()).done(function (problems) {
         $('#numberOfSolvedProblemsInRange').text('Number of solved problems in range: ' + countProblemsWithSolvedStatusThatAreSolved(problems) + " Average difficulty problems: " + calculateAverageDifficulty(problems).toFixed(2) +
             " Average difficulty of solved problems: " + calculateAverageDifficultyOfSolved(problems).toFixed(2));
